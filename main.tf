@@ -36,11 +36,21 @@ resource "aws_key_pair" "deployer" {
   public_key = file("${path.module}/key.pub")
 }
 
+import {
+  to = aws_security_group.sg_web
+  id = "sg-088a6a9aaddd2f0b0"
+}
+
+import {
+  to = aws_security_group_rule.sg_web
+  id = "sg-088a6a9aaddd2f0b0_ingress_tcp_8080_8080_0.0.0.0/0"
+}
+
 resource "aws_instance" "example" {
   ami                    = data.aws_ami.ubuntu.id
   key_name               = aws_key_pair.deployer.key_name
   instance_type          = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.sg_ssh.id]
+  vpc_security_group_ids = [aws_security_group.sg_ssh.id, aws_security_group.sg_web.id]
   user_data              = <<-EOF
               #!/bin/bash
               apt-get update
@@ -70,4 +80,19 @@ resource "aws_security_group" "sg_ssh" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+
+resource "aws_security_group" "sg_web" {
+  name = "sg_web"
+  description = "allow 8080"
+}
+
+resource "aws_security_group_rule" "sg_web" {
+  type = "ingress"
+  to_port = "8080"
+  from_port = "8080"
+  protocol = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.sg_web.id
 }
